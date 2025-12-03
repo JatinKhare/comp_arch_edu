@@ -18,6 +18,7 @@ from typing import Optional, Dict, Tuple
 from dataclasses import dataclass
 from enum import Enum, auto
 import random
+import argparse
 
 
 class PageSize(Enum):
@@ -269,7 +270,7 @@ class RISCV_Sv39_PageWalker:
         
         if not pte_l2.valid:
             if verbose:
-                print(f"  ❌ Page Fault: Level 2 PTE not valid")
+                print(f"  [FAULT] Page Fault: Level 2 PTE not valid")
             self.page_faults += 1
             return None
         
@@ -281,7 +282,7 @@ class RISCV_Sv39_PageWalker:
             # 1GB superpage
             pa = (pte_l2.ppn << 30) | (va & 0x3FFFFFFF)
             if verbose:
-                print(f"  ✅ 1GB Superpage!")
+                print(f"  [OK] 1GB Superpage!")
                 print(f"\nPhysical Address: 0x{pa:X}")
             return pa
         
@@ -299,7 +300,7 @@ class RISCV_Sv39_PageWalker:
         
         if not pte_l1.valid:
             if verbose:
-                print(f"  ❌ Page Fault: Level 1 PTE not valid")
+                print(f"  [FAULT] Page Fault: Level 1 PTE not valid")
             self.page_faults += 1
             return None
         
@@ -311,7 +312,7 @@ class RISCV_Sv39_PageWalker:
             # 2MB megapage
             pa = (pte_l1.ppn << 21) | (va & 0x1FFFFF)
             if verbose:
-                print(f"  ✅ 2MB Megapage!")
+                print(f"  [OK] 2MB Megapage!")
                 print(f"\nPhysical Address: 0x{pa:X}")
             return pa
         
@@ -329,20 +330,20 @@ class RISCV_Sv39_PageWalker:
         
         if not pte_l0.valid:
             if verbose:
-                print(f"  ❌ Page Fault: Level 0 PTE not valid")
+                print(f"  [FAULT] Page Fault: Level 0 PTE not valid")
             self.page_faults += 1
             return None
         
         if verbose:
             print(f"  PPN:         0x{pte_l0.ppn:X}")
-            print(f"  Permissions: R={'✅' if pte_l0.readable else '❌'} "
-                  f"W={'✅' if pte_l0.writable else '❌'} "
-                  f"X={'✅' if pte_l0.executable else '❌'}")
+            print(f"  Permissions: R={'OK' if pte_l0.readable else 'NO'} "
+                  f"W={'OK' if pte_l0.writable else 'NO'} "
+                  f"X={'OK' if pte_l0.executable else 'NO'}")
         
         # Check permissions
         if is_write and not pte_l0.writable:
             if verbose:
-                print(f"  ❌ Page Fault: Write permission denied")
+                print(f"  [FAULT] Page Fault: Write permission denied")
             self.page_faults += 1
             return None
         
@@ -350,7 +351,7 @@ class RISCV_Sv39_PageWalker:
         pa = (pte_l0.ppn << 12) | offset
         
         if verbose:
-            print(f"  ✅ Translation Complete!")
+            print(f"  [OK] Translation Complete!")
             print()
             print(f"Physical Address: 0x{pa:X}")
         
@@ -371,9 +372,9 @@ class RISCV_Sv39_PageWalker:
 
 def demo_sv39_basic():
     """Demonstrate basic Sv39 page walk"""
-    print("\n" + "🎯" * 35)
+    print("\n" + "=" * 70)
     print("DEMO: RISC-V Sv39 Page Walk")
-    print("🎯" * 35 + "\n")
+    print("=" * 70 + "\n")
     
     walker = RISCV_Sv39_PageWalker()
     
@@ -399,9 +400,9 @@ def demo_sv39_basic():
 
 def demo_comparison():
     """Compare address decomposition between architectures"""
-    print("\n" + "📊" * 35)
+    print("\n" + "=" * 70)
     print("DEMO: Address Format Comparison")
-    print("📊" * 35 + "\n")
+    print("=" * 70 + "\n")
     
     va = 0x7FFFF_FC0401234
     
@@ -440,9 +441,81 @@ def demo_comparison():
 
 
 def main():
-    """Main entry point"""
-    demo_sv39_basic()
-    demo_comparison()
+    """Main entry point with command line argument support"""
+    parser = argparse.ArgumentParser(
+        description="Page Walk Simulator - RISC-V Sv39 page table walk demonstration",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Run all demos
+  python page_walk_sim.py
+
+  # Run specific demo
+  python page_walk_sim.py --demo sv39
+  python page_walk_sim.py --demo comparison
+
+  # Translate specific address
+  python page_walk_sim.py --translate 0x401234
+
+  # Map and translate
+  python page_walk_sim.py --map 0x401000 0x12345000 --translate 0x401234
+        """
+    )
+    
+    parser.add_argument(
+        "--demo",
+        choices=["sv39", "comparison", "all"],
+        default="all",
+        help="Run specific demo (default: all)"
+    )
+    
+    parser.add_argument(
+        "--translate", "-t",
+        type=lambda x: int(x, 16),
+        help="Translate a specific virtual address (hex)"
+    )
+    
+    parser.add_argument(
+        "--map",
+        nargs=2,
+        metavar=("VA", "PA"),
+        help="Map virtual address to physical address (both in hex)"
+    )
+    
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        default=True,
+        help="Verbose output (default: True)"
+    )
+    
+    args = parser.parse_args()
+    
+    walker = RISCV_Sv39_PageWalker()
+    
+    # Handle mapping
+    if args.map:
+        va = int(args.map[0], 16)
+        pa = int(args.map[1], 16)
+        walker.map_page(va, pa)
+        print(f"Mapped VA 0x{va:09X} -> PA 0x{pa:09X}")
+    
+    # Handle translation
+    if args.translate:
+        pa = walker.translate(args.translate, verbose=args.verbose)
+        if pa:
+            print(f"\nTranslation successful: VA 0x{args.translate:09X} -> PA 0x{pa:09X}")
+        else:
+            print(f"\nTranslation failed: Page fault for VA 0x{args.translate:09X}")
+        walker.print_stats()
+        return
+    
+    # Run demos
+    if args.demo == "sv39" or args.demo == "all":
+        demo_sv39_basic()
+    
+    if args.demo == "comparison" or args.demo == "all":
+        demo_comparison()
     
     print("\n" + "=" * 70)
     print("Key Takeaways:")

@@ -18,6 +18,7 @@ Python Version: 3.10+
 from typing import Dict, Optional
 from dataclasses import dataclass
 import math
+import argparse
 
 
 @dataclass
@@ -63,10 +64,10 @@ class VIVTCache:
         if index in self.cache:
             entry = self.cache[index]
             if entry.valid and entry.tag == tag:
-                print(f"  ✅ VIVT HIT:  VA=0x{va:08X} → Set {index} (Tag 0x{tag:X}) → Data={entry.data}")
+                print(f"  [OK] VIVT HIT:  VA=0x{va:08X} -> Set {index} (Tag 0x{tag:X}) -> Data={entry.data}")
                 return entry.data
         
-        print(f"  ❌ VIVT MISS: VA=0x{va:08X} → Set {index} (Tag 0x{tag:X})")
+        print(f"  [MISS] VIVT MISS: VA=0x{va:08X} -> Set {index} (Tag 0x{tag:X})")
         return None
     
     def write(self, va: int, pa: int, data: int) -> None:
@@ -130,10 +131,10 @@ class VIPTCache:
         if index in self.cache:
             entry = self.cache[index]
             if entry.valid and entry.tag == tag:
-                print(f"  ✅ VIPT HIT:  VA=0x{va:08X}, PA=0x{pa:08X} → Set {index} (PA Tag 0x{tag:X}) → Data={entry.data}")
+                print(f"  [OK] VIPT HIT:  VA=0x{va:08X}, PA=0x{pa:08X} -> Set {index} (PA Tag 0x{tag:X}) -> Data={entry.data}")
                 return entry.data
         
-        print(f"  ❌ VIPT MISS: VA=0x{va:08X}, PA=0x{pa:08X} → Set {index} (PA Tag 0x{tag:X})")
+        print(f"  [MISS] VIPT MISS: VA=0x{va:08X}, PA=0x{pa:08X} -> Set {index} (PA Tag 0x{tag:X})")
         return None
     
     def write(self, va: int, pa: int, data: int) -> None:
@@ -193,16 +194,16 @@ def demo_synonym_problem():
     
     print("Step 2: Process A reads from VA1")
     data = vivt.read(va1, pa)
-    print(f"        Got value: {data} ✅")
+    print(f"        Got value: {data} [OK]")
     print()
     
     print("Step 3: Process B reads from VA2 (same PA!)")
-    print(f"        VA2=0x{va2:08X} → PA=0x{pa:08X} (same physical memory)")
+    print(f"        VA2=0x{va2:08X} -> PA=0x{pa:08X} (same physical memory)")
     data = vivt.read(va2, pa)
-    print(f"        Got value: {data} ❌ MISS! Should see 42!")
+    print(f"        Got value: {data} [MISS] MISS! Should see 42!")
     print()
     
-    print("⚠️  Problem: VIVT cache has two different VA tags")
+    print("[WARN] Problem: VIVT cache has two different VA tags")
     print(f"   VA1 and VA2 map to different cache sets!")
     print()
     print("VIVT Cache State:")
@@ -215,11 +216,11 @@ def demo_synonym_problem():
     
     print("Step 5: Process A reads from VA1 again")
     data = vivt.read(va1, pa)
-    print(f"        Got value: {data} ❌ STALE DATA!")
+    print(f"        Got value: {data} [ERROR] STALE DATA!")
     print(f"        Expected: 99 (written by Process B)")
     print()
     
-    print("💥 SYNONYM PROBLEM: Two cache lines hold different versions of same PA!")
+    print("[ERROR] SYNONYM PROBLEM: Two cache lines hold different versions of same PA!")
     print("   This violates cache coherence and causes bugs.")
     print()
     print("VIVT Cache State (two entries for same physical memory!):")
@@ -262,7 +263,7 @@ def demo_vipt_solution():
     print(f"VA2 = 0x{va2:08X} (page offset = 0x{va2 & 0xFFF:03X})")
     print(f"PA  = 0x{pa:08X} (page offset = 0x{pa & 0xFFF:03X})")
     print()
-    print("✅ All have SAME page offset → SAME cache index!")
+    print("[OK] All have SAME page offset -> SAME cache index!")
     print()
     
     print("Step 1: Process A writes value 42 to VA1")
@@ -271,15 +272,15 @@ def demo_vipt_solution():
     
     print("Step 2: Process A reads from VA1")
     data = vipt.read(va1, pa)
-    print(f"        Got value: {data} ✅")
+    print(f"        Got value: {data} [OK]")
     print()
     
     print("Step 3: Process B reads from VA2 (same PA!)")
     data = vipt.read(va2, pa)
-    print(f"        Got value: {data} ✅ HIT! Sees same data!")
+    print(f"        Got value: {data} [OK] HIT! Sees same data!")
     print()
     
-    print("✅ Success: VIPT uses PA tag, so both VAs hit the same cache line")
+    print("[OK] Success: VIPT uses PA tag, so both VAs hit the same cache line")
     print()
     print("VIPT Cache State:")
     print(vipt.get_state())
@@ -291,10 +292,10 @@ def demo_vipt_solution():
     
     print("Step 5: Process A reads from VA1 again")
     data = vipt.read(va1, pa)
-    print(f"        Got value: {data} ✅ Sees updated value!")
+    print(f"        Got value: {data} [OK] Sees updated value!")
     print()
     
-    print("✅ NO SYNONYM PROBLEM with VIPT!")
+    print("[OK] NO SYNONYM PROBLEM with VIPT!")
     print("   - VA index → same set (index from page offset)")
     print("   - PA tag → matches for both VAs")
     print("   - Single cache line for the physical address")
@@ -325,7 +326,7 @@ def demo_vipt_unsafe():
     print("  Cache: 512 sets, 64B lines")
     print("  Index bits: 9 (bits [14:6])")
     print("  Page offset: 12 bits [11:0]")
-    print("  ⚠️  Index uses bits [14:12] from VPN (not page offset)!")
+    print("  [WARN] Index uses bits [14:12] from VPN (not page offset)!")
     print()
     
     # Two VAs with same page offset but different VPNs
@@ -336,44 +337,87 @@ def demo_vipt_unsafe():
     index1 = (va1 >> 6) & 0x1FF
     index2 = (va2 >> 6) & 0x1FF
     
-    print(f"VA1 = 0x{va1:08X} → Index = {index1}")
-    print(f"VA2 = 0x{va2:08X} → Index = {index2}")
+    print(f"VA1 = 0x{va1:08X} -> Index = {index1}")
+    print(f"VA2 = 0x{va2:08X} -> Index = {index2}")
     print()
     
     if index1 != index2:
-        print("❌ Different indices even though page offsets are the same!")
+        print("[ERROR] Different indices even though page offsets are the same!")
         print("   Synonym problem can occur!")
     else:
-        print("✅ Same indices (got lucky with this example)")
+        print("[OK] Same indices (got lucky with this example)")
 
 
 def main():
-    """Main entry point"""
-    demo_synonym_problem()
-    demo_vipt_solution()
-    demo_vipt_unsafe()
+    """Main entry point with command line argument support"""
+    parser = argparse.ArgumentParser(
+        description="Synonym Problem Demonstrator - Shows VIVT vs VIPT behavior",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Run all demos
+  python synonym_demo.py
+
+  # Run specific demo
+  python synonym_demo.py --demo vivt
+  python synonym_demo.py --demo vipt
+  python synonym_demo.py --demo unsafe
+        """
+    )
+    
+    parser.add_argument(
+        "--demo",
+        choices=["vivt", "vipt", "unsafe", "all"],
+        default="all",
+        help="Run specific demo (default: all)"
+    )
+    
+    parser.add_argument(
+        "--num-sets",
+        type=int,
+        default=64,
+        help="Number of cache sets (default: 64)"
+    )
+    
+    parser.add_argument(
+        "--block-size",
+        type=int,
+        default=64,
+        help="Cache block size in bytes (default: 64)"
+    )
+    
+    args = parser.parse_args()
+    
+    if args.demo == "vivt" or args.demo == "all":
+        demo_synonym_problem()
+    
+    if args.demo == "vipt" or args.demo == "all":
+        demo_vipt_solution()
+    
+    if args.demo == "unsafe" or args.demo == "all":
+        demo_vipt_unsafe()
     
     print("\n" + "=" * 80)
     print("Key Takeaways:")
     print("=" * 80)
     print()
     print("1. Synonym Problem:")
-    print("   - Multiple VAs → same PA, but cache treats as different")
+    print("   - Multiple VAs -> same PA, but cache treats as different")
     print("   - Causes stale data and coherence violations")
     print()
     print("2. VIVT Issues:")
-    print("   - Uses VA tags → different VAs have different tags")
+    print("   - Uses VA tags -> different VAs have different tags")
     print("   - Even if they map to same PA!")
     print()
     print("3. VIPT Solution:")
     print("   - Index from VA (fast)")
     print("   - Tag from PA (correct)")
-    print("   - Works if index bits ≤ page offset bits")
+    print("   - Works if index bits <= page offset bits")
     print()
     print("4. VIPT Safety Rule:")
-    print("   - index_bits ≤ page_offset_bits")
-    print("   - For 4KB pages: index_bits ≤ 12")
-    print("   - Typical L1: 32-64 KB, 4-8 way → 6-8 index bits ✅")
+    print("   - index_bits <= page_offset_bits")
+    print("   - For 4KB pages: index_bits <= 12")
+    print("   - Typical L1: 32-64 KB, 4-8 way -> 6-8 index bits [OK]")
     print("=" * 80)
 
 

@@ -20,6 +20,7 @@ from typing import Optional, Dict
 from dataclasses import dataclass
 from enum import Enum
 import random
+import argparse
 
 
 class PageSize(Enum):
@@ -270,7 +271,7 @@ class TLB:
             # Check permissions
             if is_write and not entry.writable:
                 if verbose:
-                    print("❌ TLB Hit but WRITE PROTECTION FAULT!")
+                    print("[X] TLB Hit but WRITE PROTECTION FAULT!")
                 return None
             
             ppn = entry.ppn
@@ -285,13 +286,13 @@ class TLB:
                 entry.dirty = True
             
             if verbose:
-                print(f"✅ TLB HIT (Entry {entry_idx})")
+                print(f"[OK] TLB HIT (Entry {entry_idx})")
                 print(f"PPN:         0x{ppn:X}")
-                print(f"Permissions: R={'✅' if entry.readable else '❌'} "
-                      f"W={'✅' if entry.writable else '❌'} "
-                      f"X={'✅' if entry.executable else '❌'}")
-                print(f"Flags:       Dirty={'✅' if entry.dirty else '❌'} "
-                      f"Accessed={'✅' if entry.accessed else '❌'}")
+                print(f"Permissions: R={'OK' if entry.readable else 'NO'} "
+                      f"W={'OK' if entry.writable else 'NO'} "
+                      f"X={'OK' if entry.executable else 'NO'}")
+                print(f"Flags:       Dirty={'YES' if entry.dirty else 'NO'} "
+                      f"Accessed={'YES' if entry.accessed else 'NO'}")
                 print()
                 print(f"Physical Address: 0x{pa:08X}")
             
@@ -302,7 +303,7 @@ class TLB:
             self.misses += 1
             
             if verbose:
-                print("❌ TLB MISS!")
+                print("[MISS] TLB MISS!")
                 print("Initiating page table walk...")
             
             # Page walk
@@ -310,7 +311,7 @@ class TLB:
             
             if ppn is None:
                 if verbose:
-                    print("❌ PAGE FAULT! (No mapping in page table)")
+                    print("[FAULT] PAGE FAULT! (No mapping in page table)")
                 return None
             
             if verbose:
@@ -427,7 +428,7 @@ class TLB:
         """Print all valid TLB entries"""
         print(f"\n{'=' * 70}")
         print("TLB Contents")
-        print("=" * 70}")
+        print("=" * 70)
         print(f"{'Idx':<4} {'VPN':<10} {'PPN':<10} {'Size':<6} {'R W X':<6} {'D A':<4}")
         print("-" * 70)
         
@@ -446,9 +447,9 @@ class TLB:
 
 def demo_basic_usage():
     """Demonstrate basic TLB usage"""
-    print("\n" + "🎯" * 35)
+    print("\n" + "=" * 70)
     print("DEMO 1: Basic TLB Usage")
-    print("🎯" * 35 + "\n")
+    print("=" * 70 + "\n")
     
     tlb = TLB(num_entries=8)  # Small TLB for demo
     
@@ -477,9 +478,9 @@ def demo_basic_usage():
 
 def demo_huge_pages():
     """Demonstrate benefit of huge pages for TLB reach"""
-    print("\n" + "📄" * 35)
+    print("\n" + "=" * 70)
     print("DEMO 2: Huge Pages for Better TLB Reach")
-    print("📄" * 35 + "\n")
+    print("=" * 70 + "\n")
     
     tlb = TLB(num_entries=64)
     
@@ -521,14 +522,14 @@ def demo_huge_pages():
     print(f"\nResult with 2MB huge pages:")
     tlb_huge.print_stats()
     
-    print("\n✅ Huge pages drastically improve TLB hit rate!")
+    print("\n[OK] Huge pages drastically improve TLB hit rate!")
 
 
 def demo_tlb_invalidation():
     """Demonstrate TLB invalidation"""
-    print("\n" + "🔄" * 35)
+    print("\n" + "=" * 70)
     print("DEMO 3: TLB Invalidation and Flush")
-    print("🔄" * 35 + "\n")
+    print("=" * 70 + "\n")
     
     tlb = TLB(num_entries=8)
     
@@ -558,15 +559,132 @@ def demo_tlb_invalidation():
 
 
 def main():
-    """Main entry point"""
-    demo_basic_usage()
-    demo_huge_pages()
-    demo_tlb_invalidation()
+    """Main entry point with command line argument support"""
+    parser = argparse.ArgumentParser(
+        description="TLB Simulator - Translation Lookaside Buffer with multi-page-size support",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Run with default settings (64 entries)
+  python tlb_simulator.py
+
+  # Custom TLB size
+  python tlb_simulator.py --entries 128
+
+  # Run specific demo
+  python tlb_simulator.py --demo basic
+  python tlb_simulator.py --demo huge
+  python tlb_simulator.py --demo invalidation
+        """
+    )
+    
+    parser.add_argument(
+        "--entries", "-e",
+        type=int,
+        default=64,
+        help="Number of TLB entries (default: 64)"
+    )
+    
+    parser.add_argument(
+        "--address-bits",
+        type=int,
+        default=32,
+        help="Address width in bits (default: 32)"
+    )
+    
+    parser.add_argument(
+        "--demo",
+        choices=["basic", "huge", "invalidation", "all"],
+        default="all",
+        help="Run specific demo (default: all)"
+    )
+    
+    parser.add_argument(
+        "--interactive", "-i",
+        action="store_true",
+        help="Interactive mode: manually translate addresses"
+    )
+    
+    args = parser.parse_args()
+    
+    if args.interactive:
+        print("\n" + "=" * 70)
+        print("Interactive TLB Simulator")
+        print("=" * 70)
+        print("\nCommands:")
+        print("  translate <va> [page-size]  - Translate VA to PA")
+        print("  map <va> <pa> [page-size]  - Install mapping")
+        print("  invalidate <va>            - Invalidate TLB entry")
+        print("  flush                     - Flush entire TLB")
+        print("  stats                     - Print statistics")
+        print("  contents                  - Print TLB contents")
+        print("  quit/exit                 - Exit")
+        print()
+        
+        tlb = TLB(num_entries=args.entries, address_bits=args.address_bits)
+        
+        while True:
+            try:
+                cmd = input("tlb> ").strip().split()
+                if not cmd:
+                    continue
+                
+                if cmd[0].lower() in ["quit", "exit", "q"]:
+                    break
+                elif cmd[0].lower() == "translate" and len(cmd) > 1:
+                    va = int(cmd[1], 16)
+                    page_size = PageSize.KB_4
+                    if len(cmd) > 2:
+                        if cmd[2].upper() == "2MB":
+                            page_size = PageSize.MB_2
+                        elif cmd[2].upper() == "1GB":
+                            page_size = PageSize.GB_1
+                    tlb.translate(va, page_size)
+                elif cmd[0].lower() == "map" and len(cmd) > 2:
+                    va = int(cmd[1], 16)
+                    pa = int(cmd[2], 16)
+                    page_size = PageSize.KB_4
+                    if len(cmd) > 3:
+                        if cmd[3].upper() == "2MB":
+                            page_size = PageSize.MB_2
+                        elif cmd[3].upper() == "1GB":
+                            page_size = PageSize.GB_1
+                    tlb.install_mapping(va, pa, page_size)
+                    print(f"Mapped VA 0x{va:08X} -> PA 0x{pa:08X} ({page_size})")
+                elif cmd[0].lower() == "invalidate" and len(cmd) > 1:
+                    va = int(cmd[1], 16)
+                    tlb.invalidate(va)
+                elif cmd[0].lower() == "flush":
+                    tlb.flush()
+                elif cmd[0].lower() == "stats":
+                    tlb.print_stats()
+                elif cmd[0].lower() == "contents":
+                    tlb.print_contents()
+                else:
+                    print("Unknown command. Type 'quit' to exit.")
+            
+            except ValueError as e:
+                print(f"Error: {e}")
+            except KeyboardInterrupt:
+                print("\nExiting...")
+                break
+        
+        tlb.print_stats()
+        return
+    
+    if args.demo == "basic" or args.demo == "all":
+        demo_basic_usage()
+    
+    if args.demo == "huge" or args.demo == "all":
+        demo_huge_pages()
+    
+    if args.demo == "invalidation" or args.demo == "all":
+        demo_tlb_invalidation()
     
     print("\n" + "=" * 70)
     print("Key Takeaways:")
     print("=" * 70)
-    print("1. TLB caches VA→PA translations (avoids page walks)")
+    print("1. TLB caches VA->PA translations (avoids page walks)")
     print("2. TLB reach = number of entries × page size")
     print("3. Huge pages (2MB, 1GB) dramatically improve TLB reach")
     print("4. TLB misses are expensive (20-200 cycles)")

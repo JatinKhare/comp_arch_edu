@@ -19,6 +19,7 @@ Python Version: 3.10+
 from typing import Tuple
 from dataclasses import dataclass
 import math
+import argparse
 
 
 @dataclass
@@ -205,8 +206,8 @@ class VIPTVisualizer:
         print("  3. Compare PA tag with cache line tags")
         print("  4. Hit/Miss")
         print()
-        print("✅ Advantage: No synonym problem (same PA → same tag)")
-        print("❌ Disadvantage: Must wait for TLB before cache lookup (SERIAL)")
+        print("[OK] Advantage: No synonym problem (same PA -> same tag)")
+        print("[X] Disadvantage: Must wait for TLB before cache lookup (SERIAL)")
     
     def visualize_vipt(self, va: int, pa: int) -> None:
         """Visualize VIPT (Virtually Indexed, Physically Tagged) lookup"""
@@ -256,19 +257,19 @@ class VIPTVisualizer:
         print()
         
         if self.is_vipt_safe:
-            print("✅ SAFE: Index bits are within page offset")
-            print("   → Same page offset in VA and PA → Same cache set")
-            print("   → No synonym problem!")
+            print("[OK] SAFE: Index bits are within page offset")
+            print("   -> Same page offset in VA and PA -> Same cache set")
+            print("   -> No synonym problem!")
         else:
-            print("⚠️  UNSAFE: Some index bits from VPN (not page offset)")
-            print("   → Different VAs to same PA could map to different sets")
-            print("   → Synonym problem possible!")
+            print("[WARN] UNSAFE: Some index bits from VPN (not page offset)")
+            print("   -> Different VAs to same PA could map to different sets")
+            print("   -> Synonym problem possible!")
         print()
         
-        print("✅ Advantage: TLB and set selection happen in PARALLEL (fast!)")
-        print("✅ Advantage: PA tag avoids context switch issues")
+        print("[OK] Advantage: TLB and set selection happen in PARALLEL (fast!)")
+        print("[OK] Advantage: PA tag avoids context switch issues")
         if self.is_vipt_safe:
-            print("✅ Advantage: No synonym problem (if index ≤ page offset)")
+            print("[OK] Advantage: No synonym problem (if index <= page offset)")
     
     def compare_all_modes(self, va: int, pa: int) -> None:
         """Compare all three cache indexing modes side by side"""
@@ -282,25 +283,25 @@ class VIPTVisualizer:
         print()
         print("| Mode  | Index from | Tag from | Speed      | Synonym? | Context Switch |")
         print("|-------|-----------|----------|------------|----------|----------------|")
-        print("| VIVT  | VA        | VA       | Very Fast  | Yes ❌   | Flush needed ❌ |")
-        print("| PIPT  | PA        | PA       | Slow       | No ✅    | No flush ✅     |")
-        print("| VIPT  | VA        | PA       | Fast       | No* ✅   | No flush ✅     |")
+        print("| VIVT  | VA        | VA       | Very Fast  | Yes [X]  | Flush needed [X] |")
+        print("| PIPT  | PA        | PA       | Slow       | No [OK]  | No flush [OK]    |")
+        print("| VIPT  | VA        | PA       | Fast       | No* [OK] | No flush [OK]    |")
         print()
         print("* VIPT is safe from synonyms if index_bits ≤ page_offset_bits")
 
 
-def demo_vipt_safe():
+def demo_vipt_safe(cache_size=32768, associativity=4, block_size=64, page_size=4096):
     """Demonstrate a safe VIPT configuration"""
-    print("\n" + "🎯" * 40)
+    print("\n" + "=" * 80)
     print("DEMO 1: VIPT Safe Configuration (Typical L1)")
-    print("🎯" * 40 + "\n")
+    print("=" * 80 + "\n")
     
     # Typical L1: 32 KB, 4-way, 64B lines
     visualizer = VIPTVisualizer(
-        cache_size=32768,
-        block_size=64,
-        associativity=4,
-        page_size=4096
+        cache_size=cache_size,
+        block_size=block_size,
+        associativity=associativity,
+        page_size=page_size
     )
     
     va = 0x00401234
@@ -309,18 +310,18 @@ def demo_vipt_safe():
     visualizer.compare_all_modes(va, pa)
 
 
-def demo_vipt_unsafe():
+def demo_vipt_unsafe(cache_size=262144, associativity=1, block_size=64, page_size=4096):
     """Demonstrate an unsafe VIPT configuration"""
-    print("\n" + "⚠️" * 40)
+    print("\n" + "=" * 80)
     print("DEMO 2: VIPT Unsafe Configuration (Too Large)")
-    print("⚠️" * 40 + "\n")
+    print("=" * 80 + "\n")
     
     # Too large: 256 KB, 1-way (direct-mapped), 64B lines
     visualizer = VIPTVisualizer(
-        cache_size=262144,  # 256 KB
-        block_size=64,
-        associativity=1,    # Direct-mapped
-        page_size=4096
+        cache_size=cache_size,
+        block_size=block_size,
+        associativity=associativity,
+        page_size=page_size
     )
     
     va = 0x00401234
@@ -329,18 +330,18 @@ def demo_vipt_unsafe():
     visualizer.compare_all_modes(va, pa)
 
 
-def demo_huge_pages():
+def demo_huge_pages(cache_size=262144, associativity=1, block_size=64, page_size=2*1024*1024):
     """Demonstrate VIPT with huge pages"""
-    print("\n" + "📄" * 40)
+    print("\n" + "=" * 80)
     print("DEMO 3: VIPT with 2MB Huge Pages")
-    print("📄" * 40 + "\n")
+    print("=" * 80 + "\n")
     
     # Larger cache possible with huge pages
     visualizer = VIPTVisualizer(
-        cache_size=262144,      # 256 KB
-        block_size=64,
-        associativity=1,        # Direct-mapped
-        page_size=2*1024*1024   # 2 MB huge page
+        cache_size=cache_size,
+        block_size=block_size,
+        associativity=associativity,
+        page_size=page_size
     )
     
     va = 0x00401234
@@ -350,17 +351,99 @@ def demo_huge_pages():
 
 
 def main():
-    """Main entry point"""
-    demo_vipt_safe()
-    demo_vipt_unsafe()
-    demo_huge_pages()
+    """Main entry point with command line argument support"""
+    parser = argparse.ArgumentParser(
+        description="VIPT/PIPT/VIVT Visualizer - Compare cache indexing modes",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Run with default settings
+  python vipt_visualizer.py
+
+  # Custom cache configuration
+  python vipt_visualizer.py --cache-size 8192 --associativity 8 --block-size 128
+
+  # Test with huge pages
+  python vipt_visualizer.py --page-size 2097152
+
+  # Run specific demo only
+  python vipt_visualizer.py --demo safe
+        """
+    )
+    
+    parser.add_argument(
+        "--cache-size", "-s",
+        type=int,
+        default=32768,
+        help="Cache size in bytes (default: 32768 = 32KB)"
+    )
+    
+    parser.add_argument(
+        "--associativity", "-a",
+        type=int,
+        default=4,
+        help="Number of ways (default: 4)"
+    )
+    
+    parser.add_argument(
+        "--block-size", "-b",
+        type=int,
+        default=64,
+        help="Cache block size in bytes (default: 64)"
+    )
+    
+    parser.add_argument(
+        "--page-size", "-p",
+        type=int,
+        default=4096,
+        help="Page size in bytes (default: 4096 = 4KB)"
+    )
+    
+    parser.add_argument(
+        "--address-bits",
+        type=int,
+        default=32,
+        help="Address width in bits (default: 32)"
+    )
+    
+    parser.add_argument(
+        "--demo",
+        choices=["safe", "unsafe", "huge", "all"],
+        default="all",
+        help="Run specific demo (default: all)"
+    )
+    
+    parser.add_argument(
+        "--va",
+        type=lambda x: int(x, 16),
+        default=0x00401234,
+        help="Virtual address in hex (default: 0x00401234)"
+    )
+    
+    parser.add_argument(
+        "--pa",
+        type=lambda x: int(x, 16),
+        default=0x12345234,
+        help="Physical address in hex (default: 0x12345234)"
+    )
+    
+    args = parser.parse_args()
+    
+    if args.demo == "safe" or args.demo == "all":
+        demo_vipt_safe(args.cache_size, args.associativity, args.block_size, args.page_size)
+    
+    if args.demo == "unsafe" or args.demo == "all":
+        demo_vipt_unsafe(args.cache_size, args.associativity, args.block_size, args.page_size)
+    
+    if args.demo == "huge" or args.demo == "all":
+        demo_huge_pages(args.cache_size, args.associativity, args.block_size, args.page_size)
     
     print("\n" + "=" * 80)
     print("Key Takeaways:")
     print("=" * 80)
     print("1. VIPT combines fast lookup (parallel TLB/cache) with safety (PA tags)")
-    print("2. VIPT is safe when: index_bits ≤ page_offset_bits")
-    print("3. Modern L1 caches: 32-64 KB, high associativity → VIPT safe")
+    print("2. VIPT is safe when: index_bits <= page_offset_bits")
+    print("3. Modern L1 caches: 32-64 KB, high associativity -> VIPT safe")
     print("4. Larger caches: Use PIPT (L2/L3) or huge pages")
     print("=" * 80)
 

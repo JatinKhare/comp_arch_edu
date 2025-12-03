@@ -15,6 +15,7 @@ Python Version: 3.10+
 from typing import Dict, List
 from dataclasses import dataclass
 import math
+import argparse
 
 
 @dataclass
@@ -413,12 +414,93 @@ def demo_optimization_impact():
 
 
 def main():
-    """Main entry point"""
-    demo_emat_analysis()
-    demo_cpi_analysis()
-    demo_tlb_impact()
-    demo_combined_analysis()
-    demo_optimization_impact()
+    """Main entry point with command line argument support"""
+    parser = argparse.ArgumentParser(
+        description="Performance Analyzer - Calculate EMAT, CPI, and TLB performance metrics",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Run all demos
+  python performance_analyzer.py
+
+  # Run specific demo
+  python performance_analyzer.py --demo emat
+  python performance_analyzer.py --demo cpi
+  python performance_analyzer.py --demo tlb
+
+  # Calculate EMAT for specific cache
+  python performance_analyzer.py --emat --hit-time 1 --miss-rate 0.05 --miss-penalty 200
+        """
+    )
+    
+    parser.add_argument(
+        "--demo",
+        choices=["emat", "cpi", "tlb", "combined", "optimization", "all"],
+        default="all",
+        help="Run specific demo (default: all)"
+    )
+    
+    # EMAT calculation arguments
+    parser.add_argument(
+        "--emat",
+        action="store_true",
+        help="Calculate EMAT for single-level cache"
+    )
+    
+    parser.add_argument(
+        "--hit-time",
+        type=float,
+        default=1.0,
+        help="Cache hit time in cycles (for EMAT calculation)"
+    )
+    
+    parser.add_argument(
+        "--miss-rate",
+        type=float,
+        default=0.05,
+        help="Cache miss rate (0.0 to 1.0, for EMAT calculation)"
+    )
+    
+    parser.add_argument(
+        "--miss-penalty",
+        type=float,
+        default=200.0,
+        help="Cache miss penalty in cycles (for EMAT calculation)"
+    )
+    
+    args = parser.parse_args()
+    
+    analyzer = PerformanceAnalyzer()
+    
+    # Handle direct EMAT calculation
+    if args.emat:
+        emat = analyzer.emat_single_level(
+            args.hit_time,
+            args.miss_rate,
+            args.miss_penalty
+        )
+        print(f"\nEMAT Calculation:")
+        print(f"  Hit Time:     {args.hit_time} cycles")
+        print(f"  Miss Rate:    {args.miss_rate * 100:.2f}%")
+        print(f"  Miss Penalty: {args.miss_penalty} cycles")
+        print(f"  EMAT:         {emat:.2f} cycles")
+        return
+    
+    # Run demos
+    if args.demo == "emat" or args.demo == "all":
+        demo_emat_analysis()
+    
+    if args.demo == "cpi" or args.demo == "all":
+        demo_cpi_analysis()
+    
+    if args.demo == "tlb" or args.demo == "all":
+        demo_tlb_impact()
+    
+    if args.demo == "combined" or args.demo == "all":
+        demo_combined_analysis()
+    
+    if args.demo == "optimization" or args.demo == "all":
+        demo_optimization_impact()
     
     print("=" * 70)
     print("Key Takeaways:")
