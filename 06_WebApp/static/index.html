@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Hierarchy Educational Visualizer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧠 Memory Hierarchy Educational Visualizer</h1>
+            <p>Interactive tools for understanding Caches, TLBs, Page Walks, and VIPT</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-button active" onclick="showTab('cache')">Cache Simulator</button>
+            <button class="tab-button" onclick="showTab('vipt')">VIPT Analyzer</button>
+            <button class="tab-button" onclick="showTab('tlb')">TLB Simulator</button>
+            <button class="tab-button" onclick="showTab('pagewalk')">Page Walk</button>
+            <button class="tab-button" onclick="showTab('performance')">Performance</button>
+        </nav>
+
+        <!-- Cache Simulator Tab -->
+        <div id="cache-tab" class="tab-content active">
+            <h2>Cache Simulator</h2>
+            <div class="config-panel">
+                <h3>Configuration</h3>
+                <div class="form-group">
+                    <label>Cache Size (bytes):</label>
+                    <input type="number" id="cache-size" value="4096" min="64" step="64">
+                </div>
+                <div class="form-group">
+                    <label>Associativity:</label>
+                    <input type="number" id="cache-assoc" value="4" min="1" step="1">
+                </div>
+                <div class="form-group">
+                    <label>Block Size (bytes):</label>
+                    <input type="number" id="cache-block" value="64" min="8" step="8">
+                </div>
+                <button onclick="configureCache()">Configure Cache</button>
+            </div>
+
+            <div class="access-panel">
+                <h3>Memory Access</h3>
+                <div class="form-group">
+                    <label>Address (hex):</label>
+                    <input type="text" id="cache-addr" value="0x401000" placeholder="0x401000">
+                </div>
+                <div class="form-group">
+                    <label>Access Type:</label>
+                    <select id="cache-type">
+                        <option value="read">Read</option>
+                        <option value="write">Write</option>
+                    </select>
+                </div>
+                <button onclick="accessCache()">Access Cache</button>
+                <button onclick="showCacheStructure()">Show Structure</button>
+            </div>
+
+            <div id="cache-results" class="results"></div>
+        </div>
+
+        <!-- VIPT Analyzer Tab -->
+        <div id="vipt-tab" class="tab-content">
+            <h2>VIPT Safety Analyzer</h2>
+            <div class="config-panel">
+                <h3>Configuration</h3>
+                <div class="form-group">
+                    <label>Cache Size (bytes):</label>
+                    <input type="number" id="vipt-cache-size" value="32768" min="64" step="64">
+                </div>
+                <div class="form-group">
+                    <label>Associativity:</label>
+                    <input type="number" id="vipt-assoc" value="4" min="1" step="1">
+                </div>
+                <div class="form-group">
+                    <label>Block Size (bytes):</label>
+                    <input type="number" id="vipt-block" value="64" min="8" step="8">
+                </div>
+                <div class="form-group">
+                    <label>Page Size:</label>
+                    <select id="vipt-page-size">
+                        <option value="4096">4 KB</option>
+                        <option value="2097152">2 MB</option>
+                        <option value="1073741824">1 GB</option>
+                    </select>
+                </div>
+                <button onclick="analyzeVIPT()">Analyze VIPT Safety</button>
+            </div>
+            <div id="vipt-results" class="results"></div>
+        </div>
+
+        <!-- TLB Simulator Tab -->
+        <div id="tlb-tab" class="tab-content">
+            <h2>TLB Simulator</h2>
+            <div class="config-panel">
+                <h3>Configuration</h3>
+                <div class="form-group">
+                    <label>TLB Entries:</label>
+                    <input type="number" id="tlb-entries" value="64" min="1" step="1">
+                </div>
+                <div class="form-group">
+                    <label>Page Size:</label>
+                    <select id="tlb-page-size">
+                        <option value="4KB">4 KB</option>
+                        <option value="2MB">2 MB</option>
+                        <option value="1GB">1 GB</option>
+                    </select>
+                </div>
+            </div>
+            <div class="access-panel">
+                <h3>Address Translation</h3>
+                <div class="form-group">
+                    <label>Virtual Address (hex):</label>
+                    <input type="text" id="tlb-va" value="0x401000" placeholder="0x401000">
+                </div>
+                <button onclick="translateTLB()">Translate</button>
+            </div>
+            <div id="tlb-results" class="results"></div>
+        </div>
+
+        <!-- Page Walk Tab -->
+        <div id="pagewalk-tab" class="tab-content">
+            <h2>Page Walk Simulator</h2>
+            <div class="access-panel">
+                <h3>Address Translation</h3>
+                <div class="form-group">
+                    <label>Virtual Address (hex):</label>
+                    <input type="text" id="pw-va" value="0x401234" placeholder="0x401234">
+                </div>
+                <button onclick="translatePageWalk()">Translate</button>
+            </div>
+            <div id="pagewalk-results" class="results"></div>
+        </div>
+
+        <!-- Performance Tab -->
+        <div id="performance-tab" class="tab-content">
+            <h2>Performance Analyzer</h2>
+            <div class="config-panel">
+                <h3>EMAT Calculation</h3>
+                <div class="form-group">
+                    <label>Hit Time (cycles):</label>
+                    <input type="number" id="perf-hit-time" value="1" min="0.1" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>Miss Rate (0.0-1.0):</label>
+                    <input type="number" id="perf-miss-rate" value="0.05" min="0" max="1" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Miss Penalty (cycles):</label>
+                    <input type="number" id="perf-miss-penalty" value="200" min="1" step="1">
+                </div>
+                <button onclick="calculateEMAT()">Calculate EMAT</button>
+            </div>
+            <div id="performance-results" class="results"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
