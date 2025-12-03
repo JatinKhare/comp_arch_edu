@@ -78,13 +78,25 @@ class RISCV_Sv39_PageWalker:
     PTE size: 8 bytes.
     """
     
-    def __init__(self):
-        """Initialize RISC-V Sv39 page walker"""
+    def __init__(self, satp_base: Optional[int] = None):
+        """
+        Initialize RISC-V Sv39 page walker.
+        
+        Args:
+            satp_base: Optional fixed physical address for root page table.
+                      If None, uses default deterministic address.
+        """
         # Simulated physical memory (sparse)
         self.memory: Dict[int, bytes] = {}
         
         # Root page table (level 2) physical address
-        self.satp = self._allocate_page_table()
+        # Use deterministic address by default for consistency
+        if satp_base is None:
+            satp_base = 0x100000  # Fixed default address (1MB)
+        self.satp = self._allocate_page_table(satp_base)
+        
+        # Counter for allocating intermediate page tables deterministically
+        self.next_table_pa = 0x200000  # Start at 2MB for intermediate tables
         
         # Statistics
         self.page_walks = 0
@@ -98,10 +110,24 @@ class RISCV_Sv39_PageWalker:
         print("=" * 70)
         print()
     
-    def _allocate_page_table(self) -> int:
-        """Allocate a page table (returns physical address)"""
-        # Generate random PA for page table
-        pa = random.randint(0x10000, 0xFFFFFF) & ~0xFFF  # Page-aligned
+    def _allocate_page_table(self, pa: Optional[int] = None) -> int:
+        """
+        Allocate a page table at specified or next available physical address.
+        
+        Args:
+            pa: Optional physical address (must be page-aligned).
+                If None, uses next available deterministic address.
+        
+        Returns:
+            Physical address of allocated page table
+        """
+        if pa is None:
+            # Use next available address
+            pa = self.next_table_pa
+            self.next_table_pa += 0x1000  # Move to next page (4KB)
+        
+        # Ensure page-aligned
+        pa = pa & ~0xFFF
         
         # Initialize page table (512 entries × 8 bytes = 4096 bytes)
         self.memory[pa] = bytearray(4096)
@@ -376,7 +402,7 @@ def demo_sv39_basic():
     print("DEMO: RISC-V Sv39 Page Walk")
     print("=" * 70 + "\n")
     
-    walker = RISCV_Sv39_PageWalker()
+    walker = RISCV_Sv39_PageWalker(satp_base=0x100000)  # Deterministic satp
     
     # Map some pages
     print("Setting up page table mappings...")
@@ -489,9 +515,23 @@ Examples:
         help="Verbose output (default: True)"
     )
     
+    parser.add_argument(
+        "--satp",
+        type=lambda x: int(x, 16),
+        help="Page table root address (satp) in hex (default: 0x100000)"
+    )
+    
+    parser.add_argument(
+        "--auto-map",
+        action="store_true",
+        help="Automatically create mapping when translating unmapped addresses"
+    )
+    
     args = parser.parse_args()
     
-    walker = RISCV_Sv39_PageWalker()
+    # Create walker with optional satp base
+    satp_base = args.satp if args.satp else None
+    walker = RISCV_Sv39_PageWalker(satp_base=satp_base)
     
     # Handle mapping
     if args.map:
@@ -506,7 +546,27 @@ Examples:
         if pa:
             print(f"\nTranslation successful: VA 0x{args.translate:09X} -> PA 0x{pa:09X}")
         else:
-            print(f"\nTranslation failed: Page fault for VA 0x{args.translate:09X}")
+            # If auto-map is enabled, create a mapping and retry
+            if args.auto_map:
+                print(f"\n[INFO] Page fault detected. Auto-creating mapping...")
+                # Generate a reasonable PA (page-aligned, different from VA)
+                va_page = args.translate & ~0xFFF
+                auto_pa = va_page | 0x10000000  # Use high physical address space
+                auto_pa = auto_pa & ~0xFFF  # Ensure page-aligned
+                walker.map_page(va_page, auto_pa)
+                print(f"[OK] Created mapping: VA 0x{va_page:09X} -> PA 0x{auto_pa:09X}")
+                
+                # Retry translation
+                pa = walker.translate(args.translate, verbose=False)  # Less verbose on retry
+                if pa:
+                    print(f"\n[OK] Translation successful: VA 0x{args.translate:09X} -> PA 0x{pa:09X}")
+                else:
+                    print(f"\n[ERROR] Translation still failed after auto-mapping")
+            else:
+                print(f"\n[FAULT] Translation failed: Page fault for VA 0x{args.translate:09X}")
+                print(f"Tip: Use --map to create a mapping first, or use --auto-map to auto-create")
+                print(f"Example: python page_walk_sim.py --map 0x{args.translate & ~0xFFF:09X} 0x12345000 --translate 0x{args.translate:09X}")
+                print(f"   Or:   python page_walk_sim.py --translate 0x{args.translate:09X} --auto-map")
         walker.print_stats()
         return
     
