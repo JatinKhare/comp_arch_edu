@@ -368,7 +368,36 @@ See [`page_walk_sim.py`](./page_walk_sim.py) for complete implementations.
 - ✅ Permission checking
 - ✅ Page fault simulation
 
-### Usage Example
+### Command Line Usage
+
+```bash
+# View help
+python page_walk_sim.py --help
+
+# Run all demos
+python page_walk_sim.py
+
+# Run specific demo
+python page_walk_sim.py --demo sv39
+python page_walk_sim.py --demo comparison
+
+# Translate specific address
+python page_walk_sim.py --translate 0x401234
+
+# Map and translate
+python page_walk_sim.py --map 0x401000 0x12345000 --translate 0x401234
+```
+
+#### Command Line Arguments
+
+| Argument | Short | Description | Default |
+|----------|-------|-------------|---------|
+| `--demo` | | Run specific demo (sv39/comparison/all) | all |
+| `--translate` | `-t` | Translate a specific virtual address (hex) | None |
+| `--map` | | Map VA to PA (both in hex, space-separated) | None |
+| `--verbose` | `-v` | Verbose output | True |
+
+### Python API Usage
 
 ```python
 from page_walk_sim import RISCV_Sv39_PageWalker

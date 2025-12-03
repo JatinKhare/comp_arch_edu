@@ -312,12 +312,42 @@ See [`performance_analyzer.py`](./performance_analyzer.py) for tools to:
 - Compare cache configurations
 - Model TLB performance
 
-### Usage Example
+### Command Line Usage
+
+```bash
+# View help
+python performance_analyzer.py --help
+
+# Run all demos
+python performance_analyzer.py
+
+# Run specific demo
+python performance_analyzer.py --demo emat
+python performance_analyzer.py --demo cpi
+python performance_analyzer.py --demo tlb
+python performance_analyzer.py --demo combined
+python performance_analyzer.py --demo optimization
+
+# Calculate EMAT for specific cache configuration
+python performance_analyzer.py --emat --hit-time 1 --miss-rate 0.05 --miss-penalty 200
+```
+
+#### Command Line Arguments
+
+| Argument | Description | Default |
+|----------|-------------|---------|
+| `--demo` | Run specific demo (emat/cpi/tlb/combined/optimization/all) | all |
+| `--emat` | Calculate EMAT for single-level cache | False |
+| `--hit-time` | Cache hit time in cycles (for EMAT) | 1.0 |
+| `--miss-rate` | Cache miss rate 0.0-1.0 (for EMAT) | 0.05 |
+| `--miss-penalty` | Cache miss penalty in cycles (for EMAT) | 200.0 |
+
+### Python API Usage
 
 ```python
-from performance_analyzer import CachePerformanceAnalyzer
+from performance_analyzer import PerformanceAnalyzer
 
-analyzer = CachePerformanceAnalyzer()
+analyzer = PerformanceAnalyzer()
 
 # Single-level cache
 emat = analyzer.emat_single_level(

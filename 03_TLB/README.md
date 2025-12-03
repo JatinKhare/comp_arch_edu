@@ -462,8 +462,49 @@ See [`tlb_simulator.py`](./tlb_simulator.py) for a complete implementation.
 - ✅ Permission checking (R/W/X)
 - ✅ TLB miss simulation with page walk
 - ✅ Statistics (hit rate, reach)
+- ✅ Interactive mode for manual testing
 
-### Usage Example
+### Command Line Usage
+
+```bash
+# View help
+python tlb_simulator.py --help
+
+# Run with default settings (64 entries)
+python tlb_simulator.py
+
+# Custom TLB size
+python tlb_simulator.py --entries 128
+
+# Run specific demo
+python tlb_simulator.py --demo basic
+python tlb_simulator.py --demo huge
+python tlb_simulator.py --demo invalidation
+
+# Interactive mode for manual address translation
+python tlb_simulator.py --interactive
+```
+
+#### Command Line Arguments
+
+| Argument | Short | Description | Default |
+|----------|-------|-------------|---------|
+| `--entries` | `-e` | Number of TLB entries | 64 |
+| `--address-bits` | | Address width in bits | 32 |
+| `--demo` | | Run specific demo (basic/huge/invalidation/all) | all |
+| `--interactive` | `-i` | Interactive mode for manual testing | False |
+
+#### Interactive Mode Commands
+
+- `translate <va> [page-size]` - Translate VA to PA
+- `map <va> <pa> [page-size]` - Install mapping
+- `invalidate <va>` - Invalidate TLB entry
+- `flush` - Flush entire TLB
+- `stats` - Print statistics
+- `contents` - Print TLB contents
+- `quit/exit` - Exit
+
+### Python API Usage
 
 ```python
 from tlb_simulator import TLB, PageSize

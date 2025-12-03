@@ -335,7 +335,57 @@ See [`cache_simulator.py`](./cache_simulator.py) for a complete implementation.
 - ✅ Visual output showing tag/index/offset decomposition
 - ✅ Hit/miss statistics
 
-### Usage Example
+### Command Line Usage
+
+The cache simulator supports comprehensive command line arguments:
+
+```bash
+# View help
+python cache_simulator.py --help
+
+# Run with default settings (4KB, 4-way, 64B blocks)
+python cache_simulator.py
+
+# Configure cache properties
+python cache_simulator.py --size 8192 --associativity 8 --block-size 128
+
+# Enable debug mode to see cache structure breakdown
+python cache_simulator.py --debug
+
+# Run built-in demonstrations
+python cache_simulator.py --demos
+
+# Interactive mode for manual testing
+python cache_simulator.py --interactive
+
+# Quiet mode (suppress verbose output)
+python cache_simulator.py --quiet
+```
+
+#### Command Line Arguments
+
+| Argument | Short | Description | Default |
+|----------|-------|-------------|---------|
+| `--size` | `-s` | Total cache size in bytes | 4096 (4KB) |
+| `--associativity` | `-a` | Number of ways | 4 |
+| `--block-size` | `-b` | Cache line size in bytes | 64 |
+| `--address-bits` | | Address bus width in bits | 32 |
+| `--debug` | `-d` | Print cache structure breakdown | False |
+| `--demos` | | Run built-in demonstrations | False |
+| `--interactive` | `-i` | Interactive mode | False |
+| `--quiet` | `-q` | Suppress verbose output | False |
+
+#### Debug Mode
+
+Debug mode shows detailed cache structure:
+- Address bit layout (tag/index/offset)
+- Cache organization details
+- Bit field breakdown with ranges
+- Example address decompositions
+- Cache array structure table
+- Address mapping formulas
+
+### Python API Usage
 
 ```python
 from cache_simulator import Cache

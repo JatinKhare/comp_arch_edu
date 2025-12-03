@@ -456,6 +456,40 @@ Demonstrates:
 - Shows when index bits overlap with VPN bits
 - Validates VIPT safety rule
 
+#### Command Line Usage
+
+```bash
+# View help
+python vipt_visualizer.py --help
+
+# Run with default settings
+python vipt_visualizer.py
+
+# Custom cache configuration
+python vipt_visualizer.py --cache-size 8192 --associativity 8 --block-size 128
+
+# Test with huge pages
+python vipt_visualizer.py --page-size 2097152
+
+# Run specific demo only
+python vipt_visualizer.py --demo safe
+python vipt_visualizer.py --demo unsafe
+python vipt_visualizer.py --demo huge
+```
+
+#### Command Line Arguments
+
+| Argument | Short | Description | Default |
+|----------|-------|-------------|---------|
+| `--cache-size` | `-s` | Cache size in bytes | 32768 (32KB) |
+| `--associativity` | `-a` | Number of ways | 4 |
+| `--block-size` | `-b` | Cache block size in bytes | 64 |
+| `--page-size` | `-p` | Page size in bytes | 4096 (4KB) |
+| `--address-bits` | | Address width in bits | 32 |
+| `--demo` | | Run specific demo (safe/unsafe/huge/all) | all |
+| `--va` | | Virtual address in hex | 0x00401234 |
+| `--pa` | | Physical address in hex | 0x12345234 |
+
 ### synonym_demo.py
 
 Simulates:
@@ -463,12 +497,28 @@ Simulates:
 - VIVT cache showing stale data
 - VIPT cache avoiding the problem
 
-### Usage
+#### Command Line Usage
 
 ```bash
-python vipt_visualizer.py
+# View help
+python synonym_demo.py --help
+
+# Run all demos
 python synonym_demo.py
+
+# Run specific demo
+python synonym_demo.py --demo vivt
+python synonym_demo.py --demo vipt
+python synonym_demo.py --demo unsafe
 ```
+
+#### Command Line Arguments
+
+| Argument | Description | Default |
+|----------|-------------|---------|
+| `--demo` | Run specific demo (vivt/vipt/unsafe/all) | all |
+| `--num-sets` | Number of cache sets | 64 |
+| `--block-size` | Cache block size in bytes | 64 |
 
 ---
 
