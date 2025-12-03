@@ -375,6 +375,34 @@ python cache_simulator.py --quiet
 | `--interactive` | `-i` | Interactive mode | False |
 | `--quiet` | `-q` | Suppress verbose output | False |
 
+#### Command Line Examples
+
+```bash
+# Example 1: View cache structure for 8KB cache
+python cache_simulator.py --size 8192 --debug
+
+# Example 2: Direct-mapped cache (1-way)
+python cache_simulator.py --size 4096 --associativity 1 --demos
+
+# Example 3: Large cache with bigger blocks
+python cache_simulator.py --size 32768 --block-size 128 --associativity 8 --debug
+
+# Example 4: Fully associative (high associativity)
+python cache_simulator.py --size 4096 --associativity 64 --demos
+
+# Example 5: 64-bit address space
+python cache_simulator.py --address-bits 64 --size 65536 --debug
+
+# Example 6: Interactive mode with custom cache
+python cache_simulator.py --size 2048 --associativity 2 --interactive
+
+# Example 7: Run demos with quiet output
+python cache_simulator.py --demos --quiet
+
+# Example 8: Combine multiple options
+python cache_simulator.py -s 16384 -a 4 -b 64 --debug --demos
+```
+
 #### Debug Mode
 
 Debug mode shows detailed cache structure:

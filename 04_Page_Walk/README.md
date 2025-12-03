@@ -392,10 +392,42 @@ python page_walk_sim.py --map 0x401000 0x12345000 --translate 0x401234
 
 | Argument | Short | Description | Default |
 |----------|-------|-------------|---------|
-| `--demo` | | Run specific demo (sv39/comparison/all) | all |
+| `--demo` | | Run specific demo (sv39/comparison/all) | None |
 | `--translate` | `-t` | Translate a specific virtual address (hex) | None |
 | `--map` | | Map VA to PA (both in hex, space-separated) | None |
 | `--verbose` | `-v` | Verbose output | True |
+
+#### Command Line Examples
+
+```bash
+# Example 1: Run Sv39 page walk demo
+python page_walk_sim.py --demo sv39
+
+# Example 2: Run address format comparison demo
+python page_walk_sim.py --demo comparison
+
+# Example 3: Run all demos
+python page_walk_sim.py --demo all
+
+# Example 4: Translate specific address
+python page_walk_sim.py --translate 0x401234
+
+# Example 5: Map VA to PA and then translate
+python page_walk_sim.py --map 0x401000 0x12345000 --translate 0x401234
+
+# Example 6: Translate multiple addresses (map first, then translate)
+python page_walk_sim.py --map 0x401000 0x12345000
+python page_walk_sim.py --translate 0x401234
+python page_walk_sim.py --translate 0x401567
+
+# Example 7: Quiet mode (less verbose)
+python page_walk_sim.py --translate 0x401234 --no-verbose
+
+# Example 8: Map multiple pages
+python page_walk_sim.py --map 0x401000 0x12345000
+python page_walk_sim.py --map 0x402000 0x23456000
+python page_walk_sim.py --translate 0x401234
+```
 
 ### Python API Usage
 

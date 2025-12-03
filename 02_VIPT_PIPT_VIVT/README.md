@@ -490,6 +490,34 @@ python vipt_visualizer.py --demo huge
 | `--va` | | Virtual address in hex | 0x00401234 |
 | `--pa` | | Physical address in hex | 0x12345234 |
 
+#### Command Line Examples
+
+```bash
+# Example 1: Safe VIPT configuration (typical L1)
+python vipt_visualizer.py --cache-size 32768 --associativity 4 --demo safe
+
+# Example 2: Unsafe VIPT (too large cache)
+python vipt_visualizer.py --cache-size 262144 --associativity 1 --demo unsafe
+
+# Example 3: VIPT with 2MB huge pages
+python vipt_visualizer.py --page-size 2097152 --demo huge
+
+# Example 4: Custom addresses
+python vipt_visualizer.py --va 0x10001000 --pa 0x50001000 --demo safe
+
+# Example 5: Large cache with high associativity (still safe)
+python vipt_visualizer.py -s 65536 -a 16 -b 64 --demo safe
+
+# Example 6: Direct-mapped cache
+python vipt_visualizer.py -s 16384 -a 1 --demo safe
+
+# Example 7: Compare all modes with custom configuration
+python vipt_visualizer.py -s 32768 -a 8 -p 4096 --demo all
+
+# Example 8: Test with 1GB pages
+python vipt_visualizer.py --page-size 1073741824 --demo huge
+```
+
 ### synonym_demo.py
 
 Simulates:
@@ -519,6 +547,28 @@ python synonym_demo.py --demo unsafe
 | `--demo` | Run specific demo (vivt/vipt/unsafe/all) | all |
 | `--num-sets` | Number of cache sets | 64 |
 | `--block-size` | Cache block size in bytes | 64 |
+
+#### Command Line Examples
+
+```bash
+# Example 1: Show VIVT synonym problem
+python synonym_demo.py --demo vivt
+
+# Example 2: Show VIPT solution
+python synonym_demo.py --demo vipt
+
+# Example 3: Show unsafe VIPT configuration
+python synonym_demo.py --demo unsafe
+
+# Example 4: Run all demos
+python synonym_demo.py --demo all
+
+# Example 5: Custom cache configuration for VIVT demo
+python synonym_demo.py --demo vivt --num-sets 32 --block-size 64
+
+# Example 6: Large cache for unsafe demo
+python synonym_demo.py --demo unsafe --num-sets 512 --block-size 64
+```
 
 ---
 

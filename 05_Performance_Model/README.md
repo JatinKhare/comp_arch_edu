@@ -342,6 +342,40 @@ python performance_analyzer.py --emat --hit-time 1 --miss-rate 0.05 --miss-penal
 | `--miss-rate` | Cache miss rate 0.0-1.0 (for EMAT) | 0.05 |
 | `--miss-penalty` | Cache miss penalty in cycles (for EMAT) | 200.0 |
 
+#### Command Line Examples
+
+```bash
+# Example 1: Run EMAT analysis demo
+python performance_analyzer.py --demo emat
+
+# Example 2: Run CPI impact analysis
+python performance_analyzer.py --demo cpi
+
+# Example 3: Run TLB performance demo
+python performance_analyzer.py --demo tlb
+
+# Example 4: Run combined cache+TLB analysis
+python performance_analyzer.py --demo combined
+
+# Example 5: Run optimization impact demo
+python performance_analyzer.py --demo optimization
+
+# Example 6: Calculate EMAT for specific cache
+python performance_analyzer.py --emat --hit-time 1 --miss-rate 0.05 --miss-penalty 200
+
+# Example 7: Calculate EMAT with different miss rate
+python performance_analyzer.py --emat --hit-time 1 --miss-rate 0.10 --miss-penalty 200
+
+# Example 8: Calculate EMAT with faster hit time
+python performance_analyzer.py --emat --hit-time 0.5 --miss-rate 0.05 --miss-penalty 200
+
+# Example 9: Calculate EMAT with reduced miss penalty
+python performance_analyzer.py --emat --hit-time 1 --miss-rate 0.05 --miss-penalty 150
+
+# Example 10: Run all demos
+python performance_analyzer.py --demo all
+```
+
 ### Python API Usage
 
 ```python

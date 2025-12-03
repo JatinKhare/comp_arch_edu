@@ -494,6 +494,34 @@ python tlb_simulator.py --interactive
 | `--demo` | | Run specific demo (basic/huge/invalidation/all) | all |
 | `--interactive` | `-i` | Interactive mode for manual testing | False |
 
+#### Command Line Examples
+
+```bash
+# Example 1: Run with default TLB size (64 entries)
+python tlb_simulator.py
+
+# Example 2: Large TLB (512 entries)
+python tlb_simulator.py --entries 512
+
+# Example 3: Run basic usage demo only
+python tlb_simulator.py --demo basic
+
+# Example 4: Run huge pages demo
+python tlb_simulator.py --demo huge
+
+# Example 5: Run invalidation demo
+python tlb_simulator.py --demo invalidation
+
+# Example 6: Interactive mode with custom TLB size
+python tlb_simulator.py --entries 128 --interactive
+
+# Example 7: 64-bit address space
+python tlb_simulator.py --address-bits 64 --entries 256
+
+# Example 8: Small TLB for testing
+python tlb_simulator.py -e 8 --demo basic
+```
+
 #### Interactive Mode Commands
 
 - `translate <va> [page-size]` - Translate VA to PA
