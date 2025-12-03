@@ -16,6 +16,7 @@ from typing import Optional, List, Tuple
 from dataclasses import dataclass
 from enum import Enum
 import math
+import argparse
 
 
 class AccessType(Enum):
@@ -270,7 +271,7 @@ class Cache:
                 if victim_line.valid:
                     print(f"Action: Evict Set {index}, Way {victim_way} (Tag 0x{victim_line.tag:X})")
                     if victim_line.dirty:
-                        print(f"        └─ Dirty line → Write back to memory")
+                        print(f"        -> Dirty line -> Write back to memory")
                         self.dirty_evictions += 1
                 else:
                     print(f"Action: Load into Set {index}, Way {victim_way} (cold start)")
@@ -349,6 +350,93 @@ class Cache:
         self.write_misses = 0
         self.evictions = 0
         self.dirty_evictions = 0
+    
+    def print_cache_structure(self) -> None:
+        """
+        Print the cache structure showing tag/index/offset breakdown.
+        Useful for understanding how addresses map to cache locations.
+        """
+        print("\n" + "=" * 70)
+        print("Cache Structure Breakdown")
+        print("=" * 70)
+        
+        # Address bit layout
+        print("\nAddress Bit Layout:")
+        print(f"  Total Address Bits: {self.address_bits}")
+        tag_width = max(3, self.tag_bits)
+        index_width = max(5, self.index_bits)
+        offset_width = max(6, self.offset_bits)
+        print(f"  +{'-' * tag_width}+{'-' * index_width}+{'-' * offset_width}+")
+        print(f"  |{'Tag':^{tag_width}}|{'Index':^{index_width}}|{'Offset':^{offset_width}}|")
+        print(f"  +{'-' * tag_width}+{'-' * index_width}+{'-' * offset_width}+")
+        tag_range = f"bits {self.address_bits-1}:{self.offset_bits + self.index_bits}"
+        index_range = f"bits {self.offset_bits + self.index_bits - 1}:{self.offset_bits}"
+        offset_range = f"bits {self.offset_bits - 1}:0"
+        print(f"  |{tag_range:^{tag_width}}|{index_range:^{index_width}}|{offset_range:^{offset_width}}|")
+        print(f"  +{'-' * tag_width}+{'-' * index_width}+{'-' * offset_width}+")
+        
+        # Cache organization
+        print(f"\nCache Organization:")
+        print(f"  Total Size:        {self.size:,} bytes ({self.size // 1024} KB)")
+        print(f"  Block Size:        {self.block_size} bytes")
+        print(f"  Associativity:     {self.associativity}-way")
+        print(f"  Number of Sets:    {self.num_sets}")
+        print(f"  Number of Blocks:  {self.num_blocks}")
+        
+        # Bit field breakdown
+        print(f"\nBit Field Breakdown:")
+        print(f"  Tag Bits:          {self.tag_bits} bits (range: 0x0 to 0x{(1 << self.tag_bits) - 1:X})")
+        print(f"  Index Bits:        {self.index_bits} bits (range: 0x0 to 0x{self.num_sets - 1:X})")
+        print(f"  Offset Bits:       {self.offset_bits} bits (range: 0x0 to 0x{self.block_size - 1:X})")
+        
+        # Example address decomposition
+        print(f"\nExample Address Decomposition:")
+        example_addrs = [0x00000000, 0x00401000, 0xFFFFFFFF]
+        for addr in example_addrs:
+            if addr < (1 << self.address_bits):
+                tag, index, offset = self._decompose_address(addr)
+                print(f"  Address 0x{addr:08X}:")
+                print(f"    Tag    = 0x{tag:0{(self.tag_bits + 3) // 4}X} (bits {self.address_bits-1}:{self.offset_bits + self.index_bits})")
+                print(f"    Index  = 0x{index:0{(self.index_bits + 3) // 4}X} (bits {self.offset_bits + self.index_bits - 1}:{self.offset_bits})")
+                print(f"    Offset = 0x{offset:0{(self.offset_bits + 3) // 4}X} (bits {self.offset_bits - 1}:0)")
+                print(f"    -> Maps to Set {index}, Way 0-{self.associativity-1}")
+        
+        # Cache array visualization
+        print(f"\nCache Array Structure:")
+        print(f"  cache[set][way] = CacheLine")
+        print(f"  +{'-' * 50}+")
+        print(f"  | Set | Way | Valid | Dirty | Tag (hex) | LRU |")
+        print(f"  +{'-' * 50}+")
+        
+        # Show first few sets
+        num_sets_to_show = min(4, self.num_sets)
+        for set_idx in range(num_sets_to_show):
+            for way in range(self.associativity):
+                line = self.cache[set_idx][way]
+                valid_str = "1" if line.valid else "0"
+                dirty_str = "1" if line.dirty else "0"
+                tag_str = f"0x{line.tag:X}" if line.valid else "-"
+                lru_str = str(line.lru_counter) if line.valid else "-"
+                
+                print(f"  | {set_idx:3d} | {way:3d} |  {valid_str}   |  {dirty_str}   | {tag_str:9s} | {lru_str:3s} |")
+            
+            if set_idx < num_sets_to_show - 1:
+                print(f"  +{'-' * 50}+")
+        
+        if self.num_sets > num_sets_to_show:
+            print(f"  | ... ({self.num_sets - num_sets_to_show} more sets) ... |")
+        
+        print(f"  +{'-' * 50}+")
+        
+        # Mapping formula
+        print(f"\nAddress to Cache Mapping Formula:")
+        print(f"  Given address A:")
+        print(f"    offset = A & 0x{(1 << self.offset_bits) - 1:X}")
+        print(f"    index  = (A >> {self.offset_bits}) & 0x{(1 << self.index_bits) - 1:X}")
+        print(f"    tag    = (A >> {self.offset_bits + self.index_bits}) & 0x{(1 << self.tag_bits) - 1:X}")
+        print(f"  -> Check cache[index][way] for matching tag")
+        
+        print("=" * 70)
 
 
 def demo_basic_usage():
@@ -435,15 +523,174 @@ def demo_lru_replacement():
 
 
 def main():
-    """Main entry point for demonstrations"""
-    demo_basic_usage()
-    demo_conflict_misses()
-    demo_spatial_locality()
-    demo_lru_replacement()
+    """Main entry point with command line argument support"""
+    parser = argparse.ArgumentParser(
+        description="Cache Simulator - Educational tool for understanding cache behavior",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Run with default settings (4KB, 4-way, 64B blocks)
+  python cache_simulator.py
+
+  # Configure cache properties
+  python cache_simulator.py --size 8192 --associativity 8 --block-size 128
+
+  # Enable debug mode to see cache structure
+  python cache_simulator.py --debug
+
+  # Run demos with custom cache
+  python cache_simulator.py --size 4096 --associativity 4 --demos
+
+  # Interactive mode with custom cache
+  python cache_simulator.py --size 2048 --associativity 2 --interactive
+        """
+    )
     
-    print("\n" + "=" * 70)
-    print("All demos completed! Explore the code and try your own scenarios.")
-    print("=" * 70)
+    parser.add_argument(
+        "--size", "-s",
+        type=int,
+        default=4096,
+        help="Total cache size in bytes (default: 4096 = 4KB)"
+    )
+    
+    parser.add_argument(
+        "--associativity", "-a",
+        type=int,
+        default=4,
+        help="Number of ways (associativity) (default: 4)"
+    )
+    
+    parser.add_argument(
+        "--block-size", "-b",
+        type=int,
+        default=64,
+        help="Cache line (block) size in bytes (default: 64)"
+    )
+    
+    parser.add_argument(
+        "--address-bits",
+        type=int,
+        default=32,
+        help="Address bus width in bits (default: 32)"
+    )
+    
+    parser.add_argument(
+        "--debug", "-d",
+        action="store_true",
+        help="Enable debug mode: print cache structure breakdown"
+    )
+    
+    parser.add_argument(
+        "--demos",
+        action="store_true",
+        help="Run built-in demonstration scenarios"
+    )
+    
+    parser.add_argument(
+        "--interactive", "-i",
+        action="store_true",
+        help="Interactive mode: manually enter addresses to access"
+    )
+    
+    parser.add_argument(
+        "--quiet", "-q",
+        action="store_true",
+        help="Quiet mode: suppress verbose output during accesses"
+    )
+    
+    args = parser.parse_args()
+    
+    # Create cache with specified parameters
+    try:
+        cache = Cache(
+            size=args.size,
+            associativity=args.associativity,
+            block_size=args.block_size,
+            address_bits=args.address_bits
+        )
+    except ValueError as e:
+        print(f"Error: {e}")
+        return
+    
+    # Print debug information if requested
+    if args.debug:
+        cache.print_cache_structure()
+    
+    # Run demos if requested
+    if args.demos:
+        print("\n" + "=" * 70)
+        print("Running Built-in Demonstrations")
+        print("=" * 70)
+        
+        demo_basic_usage()
+        demo_conflict_misses()
+        demo_spatial_locality()
+        demo_lru_replacement()
+        
+        print("\n" + "=" * 70)
+        print("All demos completed!")
+        print("=" * 70)
+        return
+    
+    # Interactive mode
+    if args.interactive:
+        print("\n" + "=" * 70)
+        print("Interactive Cache Simulator")
+        print("=" * 70)
+        print("\nCommands:")
+        print("  read <address>   - Read from address (hex)")
+        print("  write <address>  - Write to address (hex)")
+        print("  stats            - Print statistics")
+        print("  structure        - Print cache structure")
+        print("  reset            - Reset statistics")
+        print("  quit/exit        - Exit")
+        print()
+        
+        while True:
+            try:
+                cmd = input("cache> ").strip().split()
+                if not cmd:
+                    continue
+                
+                if cmd[0].lower() in ["quit", "exit", "q"]:
+                    break
+                elif cmd[0].lower() == "read" and len(cmd) > 1:
+                    addr = int(cmd[1], 16)
+                    cache.read(addr, verbose=not args.quiet)
+                elif cmd[0].lower() == "write" and len(cmd) > 1:
+                    addr = int(cmd[1], 16)
+                    cache.write(addr, verbose=not args.quiet)
+                elif cmd[0].lower() == "stats":
+                    cache.print_stats()
+                elif cmd[0].lower() == "structure":
+                    cache.print_cache_structure()
+                elif cmd[0].lower() == "reset":
+                    cache.reset_stats()
+                    print("Statistics reset.")
+                else:
+                    print("Unknown command. Type 'quit' to exit.")
+            
+            except ValueError as e:
+                print(f"Error: {e}")
+            except KeyboardInterrupt:
+                print("\nExiting...")
+                break
+        
+        cache.print_stats()
+        return
+    
+    # Default: run basic demo
+    if not args.debug and not args.demos and not args.interactive:
+        print("\n" + "=" * 70)
+        print("Cache Simulator - Default Demo")
+        print("=" * 70)
+        print("\nTip: Use --help to see all options")
+        print("     Use --debug to see cache structure")
+        print("     Use --demos to run all demonstrations")
+        print("     Use --interactive for manual testing")
+        print()
+        
+        demo_basic_usage()
 
 
 if __name__ == "__main__":
